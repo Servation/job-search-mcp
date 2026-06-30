@@ -7,6 +7,8 @@ you can triage with one click. Everything runs locally — no API keys, no accou
 It's an [MCP App](https://modelcontextprotocol.io): a small server Claude Desktop talks to, plus an
 inline board that renders right in the chat.
 
+![The ranked job board inside Claude Desktop — each job scored 0–100 for fit, with Applied/Skip buttons](docs/board.png)
+
 ---
 
 ## What it does
