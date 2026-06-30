@@ -1,0 +1,2 @@
+# Normalize line endings to LF in the repo (prevents CRLF churn across platforms).
+* text=auto eol=lf

@@ -1,0 +1,40 @@
+{
+  "name": "job-search-mcp",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "MCP-native job search: deterministic sourcing + scoring, with Claude (the host model) as the job-fit evaluator. Inline review UI as an MCP App.",
+  "license": "MIT",
+  "engines": { "node": ">=20.11" },
+  "bin": { "job-search-mcp": "dist/main.js" },
+  "files": ["dist", "README.md", "LICENSE"],
+  "scripts": {
+    "build:ui": "cross-env INPUT=mcp-app.html vite build",
+    "watch:ui": "cross-env INPUT=mcp-app.html vite build --watch",
+    "typecheck": "tsc --noEmit",
+    "build:server": "tsc -p tsconfig.server.json",
+    "build": "npm run build:ui && npm run build:server",
+    "prepack": "npm run build",
+    "serve:stdio": "tsx main.ts",
+    "start:stdio": "cross-env NODE_ENV=development npm run build:ui 1>&2 && npm run serve:stdio",
+    "dev": "cross-env NODE_ENV=development concurrently \"npm run watch:ui\" \"npm run serve:stdio\""
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.7.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vite": "^6.0.0",
+    "vite-plugin-singlefile": "^2.3.0"
+  }
+}
