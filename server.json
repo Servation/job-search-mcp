@@ -1,0 +1,44 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Servation/job-search-mcp",
+  "title": "Job Search MCP",
+  "description": "Claude searches real job boards, scores each job 0-100 for fit, and shows a ranked board.",
+  "version": "0.1.1",
+  "websiteUrl": "https://github.com/Servation/job-search-mcp#readme",
+  "repository": {
+    "url": "https://github.com/Servation/job-search-mcp",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@servation/job-search-mcp",
+      "version": "0.1.1",
+      "runtimeHint": "npx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "JOB_SEARCH_MCP_DATA",
+          "description": "Optional override for the per-user data file path (defaults to ~/.job-search-mcp/jobs.json).",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "LINKEDIN_LI_AT",
+          "description": "Optional: your logged-in LinkedIn li_at cookie, for richer/Premium LinkedIn data instead of guest mode. Against LinkedIn's ToS; see README.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "LINKEDIN_JSESSIONID",
+          "description": "Optional: your logged-in LinkedIn JSESSIONID cookie, paired with LINKEDIN_LI_AT for Premium mode.",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

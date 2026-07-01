@@ -25,17 +25,34 @@ inline board that renders right in the chat.
 
 ## Setup
 
-**1. Build it**
+**1. Tell Claude Desktop about it.** Open your config file:
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+Add this under `"mcpServers"` — `npx` fetches the [published package](https://www.npmjs.com/package/@servation/job-search-mcp)
+for you, no cloning or building required:
+```json
+{
+  "mcpServers": {
+    "job-search": {
+      "command": "npx",
+      "args": ["-y", "@servation/job-search-mcp"]
+    }
+  }
+}
+```
+
+**2. Fully quit and reopen Claude Desktop** (on Windows, quit it from the system tray — closing the
+window isn't enough). That's it.
+
+<details>
+<summary>Running from source instead</summary>
+
 ```bash
 npm install
 npm run build
 ```
-
-**2. Tell Claude Desktop about it.** Open your config file:
-- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-
-Add this under `"mcpServers"` (use the full path to *this* folder's `dist/main.js`):
+Then point the config at this folder's `dist/main.js` instead:
 ```json
 {
   "mcpServers": {
@@ -46,9 +63,7 @@ Add this under `"mcpServers"` (use the full path to *this* folder's `dist/main.j
   }
 }
 ```
-
-**3. Fully quit and reopen Claude Desktop** (on Windows, quit it from the system tray — closing the
-window isn't enough). That's it.
+</details>
 
 ---
 
@@ -115,8 +130,8 @@ by adding an `env` block to the server config:
 
 ```json
 "job-search": {
-  "command": "node",
-  "args": ["D:\\job-search-mcp\\dist\\main.js"],
+  "command": "npx",
+  "args": ["-y", "@servation/job-search-mcp"],
   "env": {
     "LINKEDIN_LI_AT": "<your li_at cookie>",
     "LINKEDIN_JSESSIONID": "ajax:1234567890123456789"
