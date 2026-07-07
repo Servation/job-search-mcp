@@ -21,6 +21,7 @@
     "build": "npm run build:ui && npm run build:server",
     "prepack": "npm run build",
     "serve:stdio": "tsx main.ts",
+    "canary": "tsx scripts/canary.ts",
     "start:stdio": "cross-env NODE_ENV=development npm run build:ui 1>&2 && npm run serve:stdio",
     "dev": "cross-env NODE_ENV=development concurrently \"npm run watch:ui\" \"npm run serve:stdio\""
   },

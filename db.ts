@@ -6,6 +6,11 @@
  *    running from source (tsx) -> ./data/jobs.json; JOB_SEARCH_MCP_DATA overrides. Mirrors Memora.
  *  - Dropped llmConfig (no external LLM) and watchlist (triage is scanned/saved/dismissed).
  *  - Atomic writes (tmp + rename).
+ *  - readDb() is a PURE read: it never mutates or writes back. Board hygiene (per-company
+ *    cap, saved/dismissed suppression) runs only on explicit writes (writeDb), so merely
+ *    viewing the board can no longer silently delete jobs the seen-ledger then locks out.
+ *  - A corrupt/unreadable store is backed up (jobs.json.corrupt-<ts>) before we fall back
+ *    to empty, so a bad parse can't be silently overwritten and lose the user's tracker.
  *
  * All logging goes to stderr; stdout is reserved for the stdio JSON-RPC stream.
  */
@@ -32,7 +37,11 @@ export interface PendingWorkday {
   lastAttempt?: string;
 }
 
+// Bumped when the on-disk shape changes in a way that needs migration; coerce() reads old files tolerantly.
+export const DB_SCHEMA_VERSION = 1;
+
 export interface DatabaseSchema {
+  schemaVersion: number; // on-disk shape version (see DB_SCHEMA_VERSION)
   scannedJobs: Job[]; // discovered, awaiting evaluation/triage
   savedJobs: Job[]; // applied / tracking
   dismissedJobs: Job[]; // explicitly rejected
@@ -51,6 +60,7 @@ export interface DatabaseSchema {
 
 function emptyDb(): DatabaseSchema {
   return {
+    schemaVersion: DB_SCHEMA_VERSION,
     scannedJobs: [],
     savedJobs: [],
     dismissedJobs: [],
@@ -102,6 +112,7 @@ function coerce(parsed: Record<string, unknown>): DatabaseSchema {
   const base = emptyDb();
   const stats = (parsed.stats as Partial<DatabaseSchema["stats"]>) || {};
   return {
+    schemaVersion: typeof parsed.schemaVersion === "number" ? parsed.schemaVersion : DB_SCHEMA_VERSION,
     scannedJobs: (parsed.scannedJobs as Job[]) || [],
     savedJobs: (parsed.savedJobs as Job[]) || [],
     dismissedJobs: (parsed.dismissedJobs as Job[]) || [],
@@ -119,15 +130,31 @@ function coerce(parsed: Record<string, unknown>): DatabaseSchema {
   };
 }
 
+/**
+ * Copy an unreadable/corrupt store aside before we fall back to empty, so the next
+ * writeDb() can't silently overwrite (and lose) the user's tracker. Best-effort.
+ */
+function backupCorruptDb(cause: unknown): void {
+  try {
+    if (!fs.existsSync(DB_PATH)) return;
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const backup = `${DB_PATH}.corrupt-${stamp}`;
+    fs.copyFileSync(DB_PATH, backup);
+    console.error(`[DB] Store unreadable; backed up to ${backup} before starting empty. Cause:`, cause);
+  } catch (e) {
+    console.error("[DB] Failed to back up unreadable store:", e);
+  }
+}
+
+/** PURE read: parse + coerce, never writes. Board hygiene happens on writeDb, not here. */
 export function readDb(): DatabaseSchema {
   try {
     if (fs.existsSync(DB_PATH)) {
-      const db = coerce(JSON.parse(fs.readFileSync(DB_PATH, "utf-8")));
-      if (cleanDbScannedJobs(db)) writeDb(db);
-      return db;
+      return coerce(JSON.parse(fs.readFileSync(DB_PATH, "utf-8")));
     }
   } catch (err) {
     console.error("[DB] Error reading database file:", err);
+    backupCorruptDb(err); // preserve the bad file so the next write doesn't erase it
   }
   return emptyDb();
 }

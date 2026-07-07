@@ -319,6 +319,7 @@ function JobCard({ job, busy, onStatus }: { job: UiJob; busy: boolean; onStatus:
 
       <div style={{ display: "flex", gap: 8 }}>
         <TriageButton label="Applied" color="var(--good)" disabled={busy} onClick={() => onStatus(job, "applied")} />
+        <TriageButton label="Save" color="var(--accent)" disabled={busy} onClick={() => onStatus(job, "saved")} />
         <TriageButton label="Skip" color="var(--muted)" disabled={busy} onClick={() => onStatus(job, "dismissed")} />
       </div>
     </article>

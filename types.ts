@@ -3,7 +3,7 @@
  *
  * Ported from the original job-search-agent (src/types.ts), minus the LLMConfig
  * settings: there is no external LLM in this MCP App. Claude (the host model)
- * supplies the extraction `facts`; the server scores deterministically.
+ * assigns each job a holistic 0-100 fit score directly; the server clamps + persists it.
  */
 
 export type JobTypeType = "Full-Time" | "Contract" | "Part-Time";
@@ -70,8 +70,9 @@ export interface ResumeProfile {
 }
 
 /**
- * The extraction "facts" contract Claude fills per job. This is the exact shape
- * the original Gemini/LLM extraction prompt produced; it feeds computeMatchScore.
+ * The extraction "facts" contract for the DETERMINISTIC FALLBACK scorer only. Feeds
+ * computeMatchScore (scoring.ts), which is kept but NOT wired into evaluate_jobs — the
+ * active path is Claude's holistic score. Retained for a future weak-model fallback.
  */
 export interface JobFacts {
   coreRequirements: string[];

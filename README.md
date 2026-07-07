@@ -7,6 +7,13 @@ you can triage with one click. Everything runs locally — no API keys, no accou
 It's an [MCP App](https://modelcontextprotocol.io): a small server Claude Desktop talks to, plus an
 inline board that renders right in the chat.
 
+> **Scope:** it's tuned for **US software-engineering roles** (the built-in sources and role filters target
+> US tech employers). Other fields or regions will return sparse results.
+>
+> **Works in:** built and tested for **Claude Desktop**. It should also work in other MCP clients that both
+> run a local (stdio) server *and* render MCP App UIs, such as VS Code (Copilot), Cursor, or Goose (untested).
+> Remote-only clients (ChatGPT, Claude on web/mobile) can't launch a local server, so they won't work.
+
 ![The ranked job board inside Claude Desktop — each job scored 0–100 for fit, with Applied/Skip buttons](docs/board.png)
 
 ---
@@ -124,9 +131,10 @@ One JSON file on your machine — no cloud, nothing sent anywhere except the job
 
 ## Optional: LinkedIn Premium mode
 
-By default LinkedIn uses its **public guest** endpoints — no login, no risk to your account, and you
-already get full job descriptions. If you want richer/Premium data, you can use your logged-in account
-by adding an `env` block to the server config:
+By default LinkedIn uses its **public guest** endpoints: no login and no account-login risk, and you
+already get full job descriptions. Note that automated access still runs from your own IP and is against
+LinkedIn's User Agreement even in guest mode, so use it at your discretion. If you want richer/Premium
+data, you can use your logged-in account by adding an `env` block to the server config:
 
 ```json
 "job-search": {

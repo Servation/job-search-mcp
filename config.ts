@@ -50,7 +50,9 @@ export const GREENHOUSE_SLUGS: readonly string[] = [
   "uber", "servicenow", "amd", "paloaltonetworks", "splunk", "qualcomm", "zoom",
 ];
 
-export const LEVER_SLUGS: readonly string[] = ["netflix", "palantir"];
+// netflix left Lever (endpoint returns []; verified 2026), so it's pruned from the static
+// fallback. The remote slug registry can still add more Lever boards at runtime.
+export const LEVER_SLUGS: readonly string[] = ["palantir"];
 
 export const ASHBY_SLUGS: readonly string[] = [
   "linear", "posthog", "perplexity", "vercel", "clerk", "supabase", "resend",

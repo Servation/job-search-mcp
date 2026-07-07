@@ -3,9 +3,9 @@
  * convert to our Job model, structurally filter + dedup URLs, optionally
  * network-verify, persist unscored jobs to the store, and return them.
  *
- * Scoring is NOT done here — jobs come back unscored (matchScore = -1). Claude
- * evaluates them later (evaluate_jobs, Phase 4) and the server scores via the
- * ported computeMatchScore.
+ * Scoring is NOT done here: jobs come back unscored (matchScore = -1). Claude
+ * evaluates them later (evaluate_jobs) by assigning a holistic 0-100 fit score,
+ * which the server clamps + persists (applyHolisticScore).
  */
 import crypto from "node:crypto";
 import { globalState } from "./config.js";
@@ -51,6 +51,7 @@ export interface SourceResult {
   sourced: number; // total raw postings fetched
   fresh: number; // new after structural filter + dedup
   kept: number; // after the cap
+  bySource: Record<string, number>; // raw postings fetched per source name (0 = source returned nothing this run)
 }
 
 const DEFAULT_LIMIT = 15;
@@ -200,19 +201,26 @@ export async function sourceJobs(criteria: FindCriteria): Promise<SourceResult> 
   // empty array means "all 9 sources" (empty must not select zero).
   const srcFilter = criteria.sources && criteria.sources.length ? criteria.sources : undefined;
   const wantSrc = (name: string) => !srcFilter || srcFilter.includes(name);
-  const tasks: Promise<RawCommunityJob[]>[] = [];
-  if (wantSrc("linkedin")) tasks.push(fetchLinkedInJobs(liQuery));
-  if (wantSrc("greenhouse")) tasks.push(fetchGreenhouseJobs(globalState.cachedGreenhouseSlugs, keywords, targetRoles, searchLocation, prefersRemote, yoe));
-  if (wantSrc("lever")) tasks.push(fetchLeverJobs(globalState.cachedLeverSlugs, keywords, targetRoles, searchLocation, prefersRemote, yoe));
-  if (wantSrc("ashby")) tasks.push(fetchAshbyJobs(globalState.cachedAshbySlugs, keywords, targetRoles, searchLocation, prefersRemote, yoe));
-  if (wantSrc("workday")) tasks.push(fetchWorkdayJobs(globalState.cachedWorkdayDirectory, keywords, targetRoles, searchLocation, prefersRemote, yoe));
-  if (wantSrc("smartrecruiters")) tasks.push(fetchSmartRecruitersJobs(globalState.cachedSmartRecruitersDirectory, keywords, targetRoles, searchLocation, prefersRemote, yoe));
-  if (wantSrc("hackernews")) tasks.push(fetchHackerNewsJobs(keywords, skills, targetRoles, searchLocation, prefersRemote, yoe));
-  if (wantSrc("remoteok")) tasks.push(fetchRemoteOKJobs(keywords, skills, targetRoles, searchLocation, prefersRemote, yoe));
-  if (wantSrc("remotive")) tasks.push(fetchRemotiveJobs(keywords, skills, targetRoles, searchLocation, prefersRemote, yoe));
+  const tasks: { source: string; run: Promise<RawCommunityJob[]> }[] = [];
+  const add = (source: string, run: Promise<RawCommunityJob[]>) => tasks.push({ source, run });
+  if (wantSrc("linkedin")) add("linkedin", fetchLinkedInJobs(liQuery));
+  if (wantSrc("greenhouse")) add("greenhouse", fetchGreenhouseJobs(globalState.cachedGreenhouseSlugs, keywords, targetRoles, searchLocation, prefersRemote, yoe));
+  if (wantSrc("lever")) add("lever", fetchLeverJobs(globalState.cachedLeverSlugs, keywords, targetRoles, searchLocation, prefersRemote, yoe));
+  if (wantSrc("ashby")) add("ashby", fetchAshbyJobs(globalState.cachedAshbySlugs, keywords, targetRoles, searchLocation, prefersRemote, yoe));
+  if (wantSrc("workday")) add("workday", fetchWorkdayJobs(globalState.cachedWorkdayDirectory, keywords, targetRoles, searchLocation, prefersRemote, yoe));
+  if (wantSrc("smartrecruiters")) add("smartrecruiters", fetchSmartRecruitersJobs(globalState.cachedSmartRecruitersDirectory, keywords, targetRoles, searchLocation, prefersRemote, yoe));
+  if (wantSrc("hackernews")) add("hackernews", fetchHackerNewsJobs(keywords, skills, targetRoles, searchLocation, prefersRemote, yoe));
+  if (wantSrc("remoteok")) add("remoteok", fetchRemoteOKJobs(keywords, skills, targetRoles, searchLocation, prefersRemote, yoe));
+  if (wantSrc("remotive")) add("remotive", fetchRemotiveJobs(keywords, skills, targetRoles, searchLocation, prefersRemote, yoe));
 
   // Each scraper already swallows its own errors and returns []; allSettled is a backstop.
-  const settled = await Promise.allSettled(tasks);
+  // Track raw postings PER SOURCE so a dead/blocked source shows as "0" instead of being
+  // indistinguishable from a narrow search that legitimately matched nothing.
+  const settled = await Promise.allSettled(tasks.map((t) => t.run));
+  const bySource: Record<string, number> = {};
+  settled.forEach((s, i) => {
+    bySource[tasks[i].source] = s.status === "fulfilled" ? s.value.length : 0;
+  });
   const raw: RawCommunityJob[] = settled.flatMap((s) => (s.status === "fulfilled" ? s.value : []));
   const sourced = raw.length;
 
@@ -306,21 +314,26 @@ export async function sourceJobs(criteria: FindCriteria): Promise<SourceResult> 
     kept = kept.map((j) => ({ ...j, isUrlVerified: true })); // passed the structural check
   }
 
-  // Persist: prepend the new unscored jobs; writeDb() dedups vs saved/dismissed and caps per company.
+  // Persist. Re-read the store IMMEDIATELY before writing and apply our changes onto that
+  // fresh copy, so writes made during the multi-second scrape await — Workday self-heal
+  // (consecutiveFailures), refiner logs, and any concurrent UI triage (Apply/Skip) — are not
+  // reverted by writing back a snapshot captured before those awaits.
+  const fresh = readDb();
   const maxTotal = Math.max(limit, profile?.maxDiscoveredJobs ?? 100);
-  db.scannedJobs = [...kept, ...db.scannedJobs].slice(0, maxTotal);
-  db.stats.totalSourced += sourced;
-  db.stats.totalScanned += kept.length;
+  fresh.scannedJobs = [...kept, ...fresh.scannedJobs].slice(0, maxTotal);
+  fresh.stats.totalSourced += sourced;
+  fresh.stats.totalScanned += kept.length;
 
-  // Record the jobs we're showing into the recency ledger; prune >6mo and cap.
+  // Record the jobs we're showing into the fresh recency ledger; prune >6mo and cap.
   const nowIso = new Date().toISOString();
+  const freshLedger = fresh.seen ?? {};
   for (const j of kept) {
-    ledger[`${cleanStr(j.title)}|${cleanStr(j.company)}`] = nowIso;
-    if (j.url) ledger[normalizeJobUrl(j.url)] = nowIso;
+    freshLedger[`${cleanStr(j.title)}|${cleanStr(j.company)}`] = nowIso;
+    if (j.url) freshLedger[normalizeJobUrl(j.url)] = nowIso;
   }
-  db.seen = capLedger(ledger, cutoff, SEEN_MAX);
+  fresh.seen = capLedger(freshLedger, cutoff, SEEN_MAX);
 
-  writeDb(db);
+  writeDb(fresh);
 
-  return { jobs: kept, profile, sourced, fresh: freshRaw.length, kept: kept.length };
+  return { jobs: kept, profile, sourced, fresh: freshRaw.length, kept: kept.length, bySource };
 }
