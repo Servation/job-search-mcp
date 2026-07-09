@@ -197,7 +197,7 @@ function boardResult(jobs: Job[], profile: ResumeProfile | null, note: string): 
 
 /** Creates the job-search MCP server with the find_jobs tool and review UI. */
 export function createServer(): McpServer {
-  const server = new McpServer({ name: "Job Search MCP", version: "0.1.1" });
+  const server = new McpServer({ name: "Job Search MCP", version: "0.1.2" });
 
   // find_jobs: run the deterministic scrapers (LinkedIn + 8 boards) and return live,
   // deduped, UNSCORED jobs as TEXT (ids + full descriptions). This tool does NOT render

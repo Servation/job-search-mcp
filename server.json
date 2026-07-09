@@ -3,7 +3,7 @@
   "name": "io.github.Servation/job-search-mcp",
   "title": "Job Search MCP",
   "description": "Claude searches real job boards, scores each job 0-100 for fit, and shows a ranked board.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "websiteUrl": "https://github.com/Servation/job-search-mcp#readme",
   "repository": {
     "url": "https://github.com/Servation/job-search-mcp",
@@ -14,7 +14,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "@servation/job-search-mcp",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"

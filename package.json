@@ -1,6 +1,6 @@
 {
   "name": "@servation/job-search-mcp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "mcpName": "io.github.Servation/job-search-mcp",
   "type": "module",
   "description": "MCP-native job search: deterministic sourcing + scoring, with Claude (the host model) as the job-fit evaluator. Inline review UI as an MCP App.",
