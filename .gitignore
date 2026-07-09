@@ -28,6 +28,10 @@ logs/
 # --- Packing / publish artifacts ---
 *.tgz
 
+# --- MCP Registry publisher CLI (downloaded binary, not part of the package) ---
+mcp-publisher.exe
+mcp-publisher*.tar.gz
+
 # --- Scratch / temp test scripts (used during development, not committed) ---
 _*.mjs
 _*.js
