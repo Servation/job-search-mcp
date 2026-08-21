@@ -7,11 +7,16 @@
  * evaluated). Triage buttons call set_status through the bridge and optimistically
  * drop the card. Scoring itself is done by Claude (evaluate_jobs) + the server, not
  * here.
+ *
+ * Theming and links come from the host, not from us: we mirror hostContext.theme /
+ * hostContext.styles onto the document (the sandboxed iframe can't see Claude's own
+ * theme via prefers-color-scheme), and route "View posting" through app.openLink so
+ * the URL opens in the user's real browser instead of dying inside the sandbox.
  */
 import type { App, McpUiHostContext } from "@modelcontextprotocol/ext-apps";
-import { useApp } from "@modelcontextprotocol/ext-apps/react";
+import { useApp, useHostStyles } from "@modelcontextprotocol/ext-apps/react";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { StrictMode, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { StrictMode, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from "react";
 import { createRoot } from "react-dom/client";
 
 interface UiJob {
@@ -84,6 +89,12 @@ function JobSearchApp() {
     },
   });
 
+  // The iframe is sandboxed, so prefers-color-scheme tracks the OS rather than Claude's
+  // own light/dark setting. useHostStyles mirrors the host's theme, CSS variables and
+  // fonts onto the document (and keeps following host-context changes) so the board
+  // matches the surrounding chat.
+  useHostStyles(app, app?.getHostContext());
+
   useEffect(() => {
     if (app) setHostContext(app.getHostContext());
   }, [app]);
@@ -154,6 +165,16 @@ function Review({
       .finally(() => setBusyId((id) => (id === job.id ? null : id)));
   };
 
+  // Anchors inside the sandboxed iframe can't navigate the host, so hand the URL to the
+  // host via ui/open-link when it advertises the capability. Plain-anchor behaviour stays
+  // as the fallback for hosts that don't.
+  const canOpenLinks = Boolean(app.getHostCapabilities()?.openLinks);
+  const openPosting = (e: ReactMouseEvent<HTMLAnchorElement>, url: string) => {
+    if (!canOpenLinks) return;
+    e.preventDefault();
+    app.openLink({ url }).catch((err) => console.error(err));
+  };
+
   const triagedCount = Object.keys(triaged).length;
 
   if (data.jobs.length === 0) {
@@ -174,7 +195,7 @@ function Review({
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {jobs.map((job) => (
-            <JobCard key={job.id} job={job} busy={busyId === job.id} onStatus={onStatus} />
+            <JobCard key={job.id} job={job} busy={busyId === job.id} onStatus={onStatus} onOpen={openPosting} />
           ))}
         </div>
       )}
@@ -279,7 +300,17 @@ function TriageButton({
   );
 }
 
-function JobCard({ job, busy, onStatus }: { job: UiJob; busy: boolean; onStatus: (job: UiJob, s: TriageStatus) => void }) {
+function JobCard({
+  job,
+  busy,
+  onStatus,
+  onOpen,
+}: {
+  job: UiJob;
+  busy: boolean;
+  onStatus: (job: UiJob, s: TriageStatus) => void;
+  onOpen: (e: ReactMouseEvent<HTMLAnchorElement>, url: string) => void;
+}) {
   return (
     <article
       style={{
@@ -309,7 +340,7 @@ function JobCard({ job, busy, onStatus }: { job: UiJob; busy: boolean; onStatus:
       )}
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 10 }}>
-        <a href={job.url} target="_blank" rel="noreferrer" style={{ fontSize: 13 }}>
+        <a href={job.url} target="_blank" rel="noreferrer" style={{ fontSize: 13 }} onClick={(e) => onOpen(e, job.url)}>
           View posting ↗
         </a>
         {job.sourceTag && (

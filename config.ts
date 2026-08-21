@@ -107,11 +107,17 @@ export const WORKDAY_DIRECTORY: WorkdayCompany[] = [
   { name: "Applied Materials", tenant: "appliedmaterials", site: "AppliedExternalCareerSite", host: "appliedmaterials.wd5.myworkdayjobs.com" },
 ];
 
+// Refreshed 2026-08-20 after the canary flagged the source dead: IKEA and Equinix had
+// dropped off SmartRecruiters' public postings API entirely, and "bosch" had been
+// re-slugged to "boschgroup". Verified by counting engineering postings per slug, so
+// prefer employers that actually list SE roles here. Re-check with `npm run canary`.
 export const SMARTRECRUITERS_DIRECTORY: SmartRecruitersCompany[] = [
+  { name: "ServiceNow", slug: "servicenow" },
+  { name: "Canva", slug: "canva" },
+  { name: "Wise", slug: "wise" },
+  { name: "Experian", slug: "experian" },
   { name: "Visa", slug: "visa" },
-  { name: "IKEA", slug: "ikea" },
-  { name: "Bosch", slug: "bosch" },
-  { name: "Equinix", slug: "equinix" },
+  { name: "Bosch", slug: "boschgroup" },
 ];
 
 export const SLUG_DISPLAY_NAMES: Record<string, string> = {

@@ -1,6 +1,12 @@
 /* Base theming for the inline review UI. The host renders this in a sandboxed
    iframe and supplies light/dark via color-scheme; keep the background
-   transparent and let the host own outer padding (safe-area insets). */
+   transparent and let the host own outer padding (safe-area insets).
+
+   Dark is declared twice on purpose. The host tells us its theme over the ui/*
+   bridge and useHostStyles stamps [data-theme] on <html>; that is authoritative,
+   because Claude's own light/dark setting is independent of the OS. The
+   prefers-color-scheme block is only the fallback for before/without that
+   signal, so it is skipped when the host has explicitly said "light". */
 :root {
   color-scheme: light dark;
   --fg: #1a1a1a;
@@ -13,7 +19,7 @@
   --bad: #dc2626;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --fg: #ededed;
     --muted: #9ca3af;
     --border: rgba(140, 140, 150, 0.32);
@@ -23,6 +29,16 @@
     --warn: #fbbf24;
     --bad: #f87171;
   }
+}
+:root[data-theme="dark"] {
+  --fg: #ededed;
+  --muted: #9ca3af;
+  --border: rgba(140, 140, 150, 0.32);
+  --card-bg: rgba(180, 180, 190, 0.08);
+  --accent: #60a5fa;
+  --good: #4ade80;
+  --warn: #fbbf24;
+  --bad: #f87171;
 }
 
 * {
