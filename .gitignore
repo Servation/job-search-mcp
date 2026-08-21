@@ -48,7 +48,3 @@ _*.js
 .DS_Store
 Thumbs.db
 desktop.ini
-
-# Local MCP host harness for UI verification (not shipped)
-.harness/
-.claude/launch.json

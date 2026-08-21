@@ -165,10 +165,21 @@ anyone running a weaker local model that tends to over-rank everything; it's not
 ## Development
 
 ```bash
-npm run typecheck    # type-check UI + server
+npm run typecheck    # type-check UI + server + harness
 npm run build        # build the UI bundle (vite single-file) + compile the server (tsc)
 npm run serve:stdio  # run the server from source (tsx) for local testing
+npm run harness      # work on the review UI without Claude Desktop (see harness/)
+npm run canary       # check every job source is still returning postings
 ```
 
 The server is stdio-only (`main.ts` → `server.ts`); the UI is a React app bundled to a single inlined
 HTML file (`src/mcp-app.tsx` → `dist/mcp-app.html`) that the server serves as a `ui://` resource.
+
+Working on the UI, use [`harness/`](harness/). It is a local stand-in for Claude Desktop that renders
+the widget against a synthetic job store and a real `ui/*` bridge. Opening `dist/mcp-app.html` in a
+browser tab just gets you "Connecting…", and the things most likely to break (link opening, theming,
+the post-mount refresh) are all host-mediated, so they only show up with a host on the other end.
+
+If a job source goes dark, `npm run canary` tells you which one. Company slugs rot often, so the fix
+usually belongs in the remote slug registry that `updateCompanyDirectoriesFromRegistry()` re-reads at
+runtime, rather than in a new release.

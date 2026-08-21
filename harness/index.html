@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>MCP App host harness</title>
+  <style>
+    /* Deliberately plain. Anything styled here is the fake host chrome, not the widget,
+       and it stays visually distinct so it is never mistaken for the real thing. */
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: var(--host-bg, #fff);
+      color: var(--host-fg, #111);
+    }
+    body[data-host="dark"] { --host-bg: #1f1f1f; --host-fg: #eee; }
+    #bar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding: 8px 12px;
+      border-bottom: 1px solid #8884;
+      font-size: 13px;
+    }
+    #bar a { color: inherit; }
+    #frame { display: block; width: 100%; min-height: 320px; border: 0; }
+    #log {
+      padding: 6px 12px;
+      border-top: 1px solid #8884;
+      font: 12px ui-monospace, SFMono-Regular, Consolas, monospace;
+      color: #888;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div id="bar">
+    <strong>Host harness</strong>
+    <button id="toggle" type="button">Toggle theme</button>
+    <a href="?view=board">board</a>
+    <a href="?view=saved">saved</a>
+    <span id="status">connecting…</span>
+  </div>
+  <iframe id="frame" title="MCP App under test"></iframe>
+  <div id="log"></div>
+  <script type="module" src="./host.ts"></script>
+</body>
+</html>

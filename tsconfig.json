@@ -16,5 +16,5 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "server.ts", "types.ts", "main.ts"]
+  "include": ["src", "harness", "server.ts", "types.ts", "main.ts"]
 }
