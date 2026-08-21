@@ -17,6 +17,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult, ReadResourceResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import fs from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import type { Job, ResumeProfile } from "./types.js";
 import { sourceJobs, yoeToLinkedInLevel, type FindCriteria } from "./pipeline.js";
@@ -33,6 +34,12 @@ const SLIM_DESC_CAP = 3000;
 // (dist/server.js). Mirrors Memora's DIST_DIR pattern.
 const fromSource = import.meta.filename.endsWith(".ts");
 const DIST_DIR = fromSource ? path.join(import.meta.dirname, "dist") : import.meta.dirname;
+
+// Read the advertised version from package.json rather than repeating it here. It was
+// hardcoded, so 0.1.3 shipped announcing itself as 0.1.2 to every client: a stale version
+// is worse than a loud failure, so this deliberately throws if package.json is unreadable.
+const PKG_DIR = fromSource ? import.meta.dirname : path.join(import.meta.dirname, "..");
+const VERSION = (JSON.parse(readFileSync(path.join(PKG_DIR, "package.json"), "utf-8")) as { version: string }).version;
 
 /** Structured-output shape the review UI reads from `structuredContent`. */
 const JOB_OUT = {
@@ -197,7 +204,7 @@ function boardResult(jobs: Job[], profile: ResumeProfile | null, note: string): 
 
 /** Creates the job-search MCP server with the find_jobs tool and review UI. */
 export function createServer(): McpServer {
-  const server = new McpServer({ name: "Job Search MCP", version: "0.1.2" });
+  const server = new McpServer({ name: "Job Search MCP", version: VERSION });
 
   // find_jobs: run the deterministic scrapers (LinkedIn + 8 boards) and return live,
   // deduped, UNSCORED jobs as TEXT (ids + full descriptions). This tool does NOT render
